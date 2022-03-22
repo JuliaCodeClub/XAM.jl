@@ -91,7 +91,7 @@ function Base.empty!(record::Record)
     record.tlen       = 0
 
     #Note: data will be overwritten and indexed using data_size.
-    
+
     return record
 end
 
@@ -436,7 +436,8 @@ function alignment(record::Record)::BioAlignments.Alignment
     end
     seqpos = 0
     refpos = position(record) - 1
-    anchors = [BioAlignments.AlignmentAnchor(seqpos, refpos, BioAlignments.OP_START)]
+    alnpos = 0
+    anchors = [BioAlignments.AlignmentAnchor(seqpos, refpos, alnpos, BioAlignments.OP_START)]
     for (op, len) in zip(cigar_rle(record)...)
         if BioAlignments.ismatchop(op)
             seqpos += len
@@ -448,7 +449,8 @@ function alignment(record::Record)::BioAlignments.Alignment
         else
             error("operation $(op) is not supported")
         end
-        push!(anchors, BioAlignments.AlignmentAnchor(seqpos, refpos, op))
+        alnpos += len
+        push!(anchors, BioAlignments.AlignmentAnchor(seqpos, refpos, alnpos, op))
     end
     return BioAlignments.Alignment(anchors)
 end
@@ -504,12 +506,7 @@ function hastemplength(record::Record)
     return isfilled(record)
 end
 
-"""
-    sequence(record::Record)::BioSequences.LongDNASeq
-
-Get the segment sequence of `record`.
-"""
-function sequence(record::Record)
+function sequence(::Type{S}, record::Record) where S <: BioSequences.LongSequence #TODO: add optional part retrieval.
     checkfilled(record)
     seqlen = seqlength(record)
     if seqlen == 0
@@ -522,7 +519,16 @@ function sequence(record::Record)
         x = unsafe_load(src, i)
         data[i] = (x & 0x0f0f0f0f0f0f0f0f) << 4 | (x & 0xf0f0f0f0f0f0f0f0) >> 4
     end
-    return BioSequences.LongDNASeq(data, 1:seqlen, false)
+    return S(data, UInt64(seqlen))
+end
+
+"""
+    sequence(record::Record)::BioSequences.LongDNA{4}
+
+Get the segment sequence of `record`.
+"""
+function sequence(record::Record) #TODO: add optional part retrieval.
+    return sequence(BioSequences.LongDNA{4}, record)
 end
 
 function hassequence(record::Record)
