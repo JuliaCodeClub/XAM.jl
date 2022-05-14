@@ -24,4 +24,8 @@ include("record.jl")
 include("writer.jl")
 include("overlap.jl")
 
+function BioGenerics.groupname(record::BAM.Record)
+	return refname(record)
+end
+
 end

@@ -56,4 +56,8 @@ include("reader.jl")
 include("readrecord.jl")
 include("writer.jl")
 
+function BioGenerics.groupname(record::SAM.Record)
+	return refname(record)
+end
+
 end
